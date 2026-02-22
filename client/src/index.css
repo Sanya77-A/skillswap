@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: #0B0F19;
+  --color-surface: #111827;
+  --color-surface-2: #0F172A;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-text-primary: #E5E7EB;
+  --color-text-secondary: #9CA3AF;
+  --color-accent: #6C63FF;
+  --color-accent-hover: #5b52e8;
+  --color-accent-2: #22C55E;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --radius: 1rem;
+  --transition: 200ms ease;
+}
+
+.light {
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F3F4F6;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-accent: #6C63FF;
+  --color-accent-hover: #5b52e8;
+  --color-accent-2: #22C55E;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+/* Focus ring for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+}
+
+/* Smooth transitions */
+button, a, [role="button"] {
+  @apply transition-all duration-200;
+}
