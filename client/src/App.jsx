@@ -26,10 +26,8 @@ export default function App() {
   const { user } = useSelector((s) => s.auth);
 
   useEffect(() => {
-    if (!user) {
-      dispatch(fetchMe()).catch(() => dispatch(clearAuth()));
-    }
-  }, [user, dispatch]);
+    dispatch(fetchMe());
+  }, [dispatch]);
 
   return (
     <Routes>

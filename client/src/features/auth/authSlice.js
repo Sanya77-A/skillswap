@@ -65,6 +65,7 @@ const authSlice = createSlice({
     loading: false,
     error: null,
     isAuthenticated: false,
+    isInitializing: true,  // true until first fetchMe completes
   },
   reducers: {
     setCredentials: (state, { payload }) => {
@@ -98,10 +99,12 @@ const authSlice = createSlice({
       .addCase(fetchMe.fulfilled, (state, { payload }) => {
         state.user = payload;
         state.isAuthenticated = true;
+        state.isInitializing = false;
       })
       .addCase(fetchMe.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.isInitializing = false;
         clearAccessToken();
       })
       .addCase(refreshToken.fulfilled, (state, { payload }) => {
@@ -110,6 +113,7 @@ const authSlice = createSlice({
       .addCase(refreshToken.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.isInitializing = false;
         clearAccessToken();
       })
       .addMatcher(
