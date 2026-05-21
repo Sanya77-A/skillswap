@@ -83,6 +83,9 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch((err) => {
+            console.warn("Local video play failed:", err);
+          });
         }
 
         const peer = new RTCPeerConnection(ICE_CONFIG);
@@ -92,12 +95,23 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
 
         peer.ontrack = (event) => {
           if (remoteVideoRef.current) {
-            let remoteStream = event.streams[0];
-            if (!remoteStream) {
-              remoteStream = new MediaStream();
-              remoteStream.addTrack(event.track);
+            let remoteStream = remoteVideoRef.current.srcObject;
+            if (!remoteStream || !(remoteStream instanceof MediaStream)) {
+              remoteStream = event.streams[0] || new MediaStream();
+              remoteVideoRef.current.srcObject = remoteStream;
             }
-            remoteVideoRef.current.srcObject = remoteStream;
+            
+            if (event.track) {
+              const hasTrack = remoteStream.getTracks().some((t) => t.id === event.track.id);
+              if (!hasTrack) {
+                remoteStream.addTrack(event.track);
+              }
+            }
+
+            remoteVideoRef.current.play().catch((err) => {
+              console.warn("Autoplay remote video failed, waiting for user interaction:", err);
+            });
+            
             setHasConnected(true);
           }
         };
