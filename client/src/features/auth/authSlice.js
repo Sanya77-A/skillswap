@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { api } from "../../utils/api";
+import { api, setAccessToken, clearAccessToken } from "../../utils/api";
 
 export const register = createAsyncThunk(
   "auth/register",
@@ -82,15 +82,18 @@ const authSlice = createSlice({
         state.user = payload.user;
         state.isAuthenticated = true;
         state.error = null;
+        if (payload.accessToken) setAccessToken(payload.accessToken);
       })
       .addCase(login.fulfilled, (state, { payload }) => {
         state.user = payload.user;
         state.isAuthenticated = true;
         state.error = null;
+        if (payload.accessToken) setAccessToken(payload.accessToken);
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        clearAccessToken();
       })
       .addCase(fetchMe.fulfilled, (state, { payload }) => {
         state.user = payload;
@@ -99,10 +102,15 @@ const authSlice = createSlice({
       .addCase(fetchMe.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        clearAccessToken();
+      })
+      .addCase(refreshToken.fulfilled, (state, { payload }) => {
+        if (payload?.accessToken) setAccessToken(payload.accessToken);
       })
       .addCase(refreshToken.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        clearAccessToken();
       })
       .addMatcher(
         (action) => [register.pending, login.pending].includes(action.type),

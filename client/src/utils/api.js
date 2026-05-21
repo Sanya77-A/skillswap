@@ -10,6 +10,29 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// In-memory token store (survives re-renders, cleared on tab close)
+let _accessToken = null;
+
+export function setAccessToken(token) {
+  _accessToken = token;
+}
+
+export function getAccessToken() {
+  return _accessToken;
+}
+
+export function clearAccessToken() {
+  _accessToken = null;
+}
+
+// Attach token as Authorization header on every request
+api.interceptors.request.use((config) => {
+  if (_accessToken) {
+    config.headers["Authorization"] = `Bearer ${_accessToken}`;
+  }
+  return config;
+});
+
 let refreshSubscribers = [];
 function onRefreshed() {
   refreshSubscribers.forEach(({ resolve, original }) => resolve(api(original)));
