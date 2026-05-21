@@ -33,7 +33,11 @@ app.use(helmet());
 
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
-  : ["http://localhost:5173"];
+  : [
+      "http://localhost:5173",
+      "https://skillswap-lyart.vercel.app",
+      "https://skillswap-kxq1s9bc6-sanyas-projects-5686af3a.vercel.app"
+    ];
 
 app.use(
   cors({
