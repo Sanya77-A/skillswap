@@ -46,7 +46,7 @@ export default function RequestsPage() {
         </TabsList>
         <div className="space-y-4">
           {(requests || []).map((r) => {
-            const isReceiver = r.receiver?._id === user?._id;
+            const isReceiver = r.receiver?._id?.toString() === user?._id?.toString();
             const other = isReceiver ? r.sender : r.receiver;
             return (
               <Card key={r._id} className="p-6 flex flex-wrap items-center justify-between gap-4">
