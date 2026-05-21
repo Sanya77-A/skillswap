@@ -205,6 +205,7 @@ export default function ChatPage() {
           isVideo={callState.isVideo}
           incomingOffer={callState.offer}
           bufferedCandidates={callState.iceCandidates}
+          localUserName={user?.name}
           onEnd={() => setCallState({ status: "idle" })}
         />
       )}

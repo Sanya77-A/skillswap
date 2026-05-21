@@ -2,30 +2,59 @@ import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from "lucide-react";
 import { Button } from "./ui/Button";
 
-const STUN_SERVERS = {
+const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:openrelay.metered.ca:80" },
+    { 
+      urls: "turn:openrelay.metered.ca:80", 
+      username: "openrelayproject", 
+      credential: "openrelayproject" 
+    },
+    { 
+      urls: "turn:openrelay.metered.ca:443", 
+      username: "openrelayproject", 
+      credential: "openrelayproject" 
+    },
+    { 
+      urls: "turn:openrelay.metered.ca:443?transport=tcp", 
+      username: "openrelayproject", 
+      credential: "openrelayproject" 
+    }
   ],
 };
 
-export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, isVideo, incomingOffer, bufferedCandidates = [], onEnd }) {
+export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, isVideo, incomingOffer, bufferedCandidates = [], localUserName = "Someone", onEnd }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
+  const processedCandidatesRef = useRef(new Set());
+  const bufferedCandidatesRef = useRef(bufferedCandidates);
   
   const [hasConnected, setHasConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(!isVideo);
 
+  // Keep buffered candidates ref updated
+  useEffect(() => {
+    bufferedCandidatesRef.current = bufferedCandidates;
+  }, [bufferedCandidates]);
+
   const applyCandidates = async (peer) => {
     try {
-      const candidates = [...bufferedCandidates, ...pendingCandidatesRef.current];
+      const candidates = [...bufferedCandidatesRef.current, ...pendingCandidatesRef.current];
       pendingCandidatesRef.current = [];
       for (const c of candidates) {
-        if (c) await peer.addIceCandidate(new RTCIceCandidate(c)).catch(console.error);
+        if (!c) continue;
+        const cStr = typeof c === "string" ? c : JSON.stringify(c);
+        if (processedCandidatesRef.current.has(cStr)) continue;
+        processedCandidatesRef.current.add(cStr);
+        await peer.addIceCandidate(new RTCIceCandidate(c)).catch((e) => {
+          console.warn("Could not add ice candidate during applyCandidates:", e);
+        });
       }
     } catch (e) {
       console.error("Error applying buffered candidates", e);
@@ -56,14 +85,19 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
           localVideoRef.current.srcObject = stream;
         }
 
-        const peer = new RTCPeerConnection(STUN_SERVERS);
+        const peer = new RTCPeerConnection(ICE_CONFIG);
         peerRef.current = peer;
 
         stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
         peer.ontrack = (event) => {
-          if (remoteVideoRef.current && event.streams[0]) {
-            remoteVideoRef.current.srcObject = event.streams[0];
+          if (remoteVideoRef.current) {
+            let remoteStream = event.streams[0];
+            if (!remoteStream) {
+              remoteStream = new MediaStream();
+              remoteStream.addTrack(event.track);
+            }
+            remoteVideoRef.current.srcObject = remoteStream;
             setHasConnected(true);
           }
         };
@@ -74,10 +108,16 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
           }
         };
 
+        peer.oniceconnectionstatechange = () => {
+          if (peer.iceConnectionState === "connected" || peer.iceConnectionState === "completed") {
+            setHasConnected(true);
+          }
+        };
+
         if (isInitiator) {
           const offer = await peer.createOffer();
           await peer.setLocalDescription(offer);
-          socket.emit("call_user", { to: remoteUserId, offer, isVideo, callerName: "You" });
+          socket.emit("call_user", { to: remoteUserId, offer, isVideo, callerName: localUserName });
           // Note: initiator doesn't have an incoming offer yet.
           // They will apply candidates after receiving answer_call.
         } else {
@@ -117,14 +157,19 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
     };
 
     const handleIceCandidate = async ({ candidate }) => {
+      if (!candidate) return;
+      const cStr = typeof candidate === "string" ? candidate : JSON.stringify(candidate);
+      if (processedCandidatesRef.current.has(cStr)) return;
+
       if (!peerRef.current || !peerRef.current.currentRemoteDescription) {
         pendingCandidatesRef.current.push(candidate);
         return;
       }
       try {
+        processedCandidatesRef.current.add(cStr);
         await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {
-        console.error("Error adding ice candidate", e);
+        console.warn("Error adding ice candidate:", e);
       }
     };
 
