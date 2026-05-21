@@ -13,8 +13,17 @@ dotenv.config();
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((url) => url.trim())
+  : ["http://localhost:5173"];
+
 const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true },
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  },
   path: "/socket.io",
 });
 
@@ -26,6 +35,7 @@ let matchCronTimer = null;
 connectDB().then(() => {
   server.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
+    logger.info(`Allowed CORS origins: ${allowedOrigins.join(", ")}`);
     matchCronTimer = setInterval(() => {
       recomputeAllMatchCaches().then(() => logger.info("Match cache recomputed")).catch((err) => logger.error("Match cache cron error", err.message));
     }, MATCH_CACHE_CRON_MS);
