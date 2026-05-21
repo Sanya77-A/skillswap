@@ -160,46 +160,71 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
   };
 
   return (
-    <div className="absolute inset-0 bg-surface z-50 flex flex-col rounded-xl overflow-hidden shadow-2xl">
-      <div className="flex-1 relative bg-black flex items-center justify-center">
-        {/* Remote Video */}
-        <video 
-          ref={remoteVideoRef} 
-          autoPlay 
-          playsInline 
-          className="w-full h-full object-cover"
-        />
-        {!hasConnected && (
-          <div className="absolute inset-0 flex items-center justify-center text-white flex-col gap-4">
-            <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center animate-pulse">
-              <Phone className="w-8 h-8 text-accent animate-bounce" />
+    <div className="absolute inset-0 bg-gray-900 z-50 flex flex-col rounded-xl overflow-hidden shadow-2xl font-sans">
+      <div className="flex-1 relative p-4 pb-24 flex items-center justify-center">
+        
+        <div className="w-full h-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* Local Video */}
+          <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/50 border border-gray-700 shadow-xl flex items-center justify-center group">
+            <video 
+              ref={localVideoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={`w-full h-full object-cover transition-opacity duration-300 ${isVideoOff ? 'opacity-0' : 'opacity-100'}`} 
+            />
+            {isVideoOff && (
+              <div className="absolute inset-0 flex items-center justify-center flex-col gap-3">
+                <div className="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center">
+                  <VideoOff className="w-10 h-10 text-gray-400" />
+                </div>
+                <p className="text-gray-400 font-medium text-sm">Camera Off</p>
+              </div>
+            )}
+            <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-white text-sm font-medium border border-white/10 flex items-center gap-2">
+              You
+              {isMuted && <MicOff className="w-4 h-4 text-danger" />}
             </div>
-            <p className="text-lg font-medium">{isInitiator ? `Calling ${remoteUserName}...` : "Connecting..."}</p>
           </div>
-        )}
 
-        {/* Local Video PIP */}
-        <div className="absolute bottom-4 right-4 w-32 h-48 bg-gray-800 rounded-lg overflow-hidden border-2 border-border shadow-lg">
-          <video 
-            ref={localVideoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className={`w-full h-full object-cover ${isVideoOff ? 'hidden' : ''}`} 
-          />
-          {isVideoOff && (
-            <div className="w-full h-full flex items-center justify-center bg-surface text-text-secondary">
-              <VideoOff className="w-8 h-8" />
-            </div>
-          )}
+          {/* Remote Video */}
+          <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/50 border border-gray-700 shadow-xl flex items-center justify-center">
+            <video 
+              ref={remoteVideoRef} 
+              autoPlay 
+              playsInline 
+              className={`w-full h-full object-cover transition-opacity duration-300 ${!hasConnected ? 'opacity-0' : 'opacity-100'}`}
+            />
+            {!hasConnected && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4 bg-gray-800/80 backdrop-blur-sm">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center animate-pulse absolute inset-0 scale-150" />
+                  <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center relative z-10">
+                    <Phone className="w-8 h-8 text-white animate-bounce" />
+                  </div>
+                </div>
+                <p className="text-lg font-medium tracking-wide mt-4">
+                  {isInitiator ? `Calling ${remoteUserName}...` : "Connecting..."}
+                </p>
+              </div>
+            )}
+            {hasConnected && (
+              <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-white text-sm font-medium border border-white/10">
+                {remoteUserName}
+              </div>
+            )}
+          </div>
+          
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="h-20 bg-surface border-t border-border flex items-center justify-center gap-6 px-6">
+      {/* Floating Controls */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-4 rounded-full bg-gray-900/80 backdrop-blur-xl border border-white/10 shadow-2xl">
         <button 
           onClick={toggleMute}
-          className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-danger/20 text-danger' : 'bg-surface-2 text-text-primary hover:bg-border'}`}
+          className={`p-4 rounded-full transition-all duration-300 ${isMuted ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isMuted ? "Unmute" : "Mute"}
         >
           {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
         </button>
@@ -207,7 +232,8 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
         {isVideo && (
           <button 
             onClick={toggleVideo}
-            className={`p-4 rounded-full transition-colors ${isVideoOff ? 'bg-danger/20 text-danger' : 'bg-surface-2 text-text-primary hover:bg-border'}`}
+            className={`p-4 rounded-full transition-all duration-300 ${isVideoOff ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            title={isVideoOff ? "Turn on camera" : "Turn off camera"}
           >
             {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
           </button>
@@ -215,7 +241,8 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
 
         <button 
           onClick={handleEndCall}
-          className="p-4 rounded-full bg-danger text-white hover:bg-danger/90 transition-colors"
+          className="p-4 rounded-full bg-danger text-white hover:bg-danger/90 hover:scale-105 transition-all duration-300 shadow-lg shadow-danger/30"
+          title="End Call"
         >
           <PhoneOff className="w-6 h-6" />
         </button>
