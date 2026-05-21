@@ -9,15 +9,28 @@ const STUN_SERVERS = {
   ],
 };
 
-export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, isVideo, incomingOffer, onEnd }) {
+export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, isVideo, incomingOffer, bufferedCandidates = [], onEnd }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
   
   const [hasConnected, setHasConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(!isVideo);
+
+  const applyCandidates = async (peer) => {
+    try {
+      const candidates = [...bufferedCandidates, ...pendingCandidatesRef.current];
+      pendingCandidatesRef.current = [];
+      for (const c of candidates) {
+        if (c) await peer.addIceCandidate(new RTCIceCandidate(c)).catch(console.error);
+      }
+    } catch (e) {
+      console.error("Error applying buffered candidates", e);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -65,8 +78,11 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
           const offer = await peer.createOffer();
           await peer.setLocalDescription(offer);
           socket.emit("call_user", { to: remoteUserId, offer, isVideo, callerName: "You" });
+          // Note: initiator doesn't have an incoming offer yet.
+          // They will apply candidates after receiving answer_call.
         } else {
           await peer.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+          await applyCandidates(peer); // Apply early candidates
           const answer = await peer.createAnswer();
           await peer.setLocalDescription(answer);
           socket.emit("answer_call", { to: remoteUserId, answer });
@@ -81,8 +97,6 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
 
     return () => {
       isMounted = false;
-      // Note: we don't call handleEndCall here to prevent StrictMode double-mount from killing the call immediately.
-      // If the component truly unmounts via user action, they should click the End Call button.
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -98,14 +112,17 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
     const handleAnswer = async ({ answer }) => {
       if (peerRef.current && !peerRef.current.currentRemoteDescription) {
         await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        await applyCandidates(peerRef.current); // Apply candidates received before answer
       }
     };
 
     const handleIceCandidate = async ({ candidate }) => {
+      if (!peerRef.current || !peerRef.current.currentRemoteDescription) {
+        pendingCandidatesRef.current.push(candidate);
+        return;
+      }
       try {
-        if (peerRef.current) {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        }
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {
         console.error("Error adding ice candidate", e);
       }
@@ -116,6 +133,8 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
     };
 
     socket.on("call_answered", handleAnswer);
+    // Note: VideoCall has its own ice_candidate listener independent of ChatPage
+    // to handle ones arriving after mount.
     socket.on("ice_candidate", handleIceCandidate);
     socket.on("call_ended", handleCallEnded);
 

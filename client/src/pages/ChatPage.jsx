@@ -16,7 +16,7 @@ export default function ChatPage() {
   const { user } = useSelector((s) => s.auth);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState([]);
-  const [callState, setCallState] = useState({ status: "idle" });
+  const [callState, setCallState] = useState({ status: "idle", iceCandidates: [] });
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -37,20 +37,28 @@ export default function ChatPage() {
     
     const handleMessage = (msg) => dispatch(addMessage(msg));
     const handleIncomingCall = ({ from, offer, isVideo, callerName }) => {
-      setCallState({ status: "incoming", remoteId: from, offer, isVideo, callerName });
+      setCallState({ status: "incoming", remoteId: from, offer, isVideo, callerName, iceCandidates: [] });
     };
     const handleCallEnded = () => {
       setCallState(prev => prev.status === "incoming" ? { status: "idle" } : prev);
+    };
+    const handleIceCandidate = ({ candidate }) => {
+      setCallState(prev => {
+        if (prev.status === "idle") return prev;
+        return { ...prev, iceCandidates: [...(prev.iceCandidates || []), candidate] };
+      });
     };
 
     socket.on("message", handleMessage);
     socket.on("incoming_call", handleIncomingCall);
     socket.on("call_ended", handleCallEnded);
+    socket.on("ice_candidate", handleIceCandidate);
     
     return () => {
       socket.off("message", handleMessage);
       socket.off("incoming_call", handleIncomingCall);
       socket.off("call_ended", handleCallEnded);
+      socket.off("ice_candidate", handleIceCandidate);
     };
   }, [socket, dispatch]);
 
@@ -60,7 +68,8 @@ export default function ChatPage() {
       status: "calling", 
       remoteId: other._id, 
       remoteUserName: other.name, 
-      isVideo: isVideoCall 
+      isVideo: isVideoCall,
+      iceCandidates: []
     });
   };
 
@@ -195,6 +204,7 @@ export default function ChatPage() {
           remoteUserName={callState.remoteUserName || callState.callerName}
           isVideo={callState.isVideo}
           incomingOffer={callState.offer}
+          bufferedCandidates={callState.iceCandidates}
           onEnd={() => setCallState({ status: "idle" })}
         />
       )}
