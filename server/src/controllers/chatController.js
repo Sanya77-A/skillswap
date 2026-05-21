@@ -15,13 +15,13 @@ const getOrCreateConversation = async (user1Id, user2Id) => {
   // Always sort participants for consistent ordering
   const sorted = [user1Id.toString(), user2Id.toString()].sort();
 
-  // If conversation already exists, return it directly (no swap check needed)
+  // If conversation already exists, return it directly
   const existing = await Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
   if (existing) return existing;
 
-  // No existing conversation — check they have an accepted/completed swap
+  // Allow chat if any swap request exists between these users (pending, accepted, or completed)
   const allowed = await SwapRequest.findOne({
-    status: { $in: ["ACCEPTED", "COMPLETED"] },
+    status: { $in: ["PENDING", "ACCEPTED", "COMPLETED"] },
     $or: [
       { sender: user1Id, receiver: user2Id },
       { sender: user2Id, receiver: user1Id },
