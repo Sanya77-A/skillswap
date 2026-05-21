@@ -7,9 +7,9 @@ export const updateProfileSchema = z.object({
     location: z.string().max(200).optional(),
     availability: z.array(z.string()).optional(),
     experienceLevel: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
-    skillsOffered: z.array(z.string().trim()).optional(),
-    skillsWanted: z.array(z.string().trim()).optional(),
-  }),
+    skillsOffered: z.union([z.array(z.string().trim()), z.string()]).optional(),
+    skillsWanted: z.union([z.array(z.string().trim()), z.string()]).optional(),
+  }).passthrough(),
   query: z.any().optional(),
   params: z.any().optional(),
 });

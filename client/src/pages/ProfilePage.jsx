@@ -30,11 +30,15 @@ export default function ProfilePage() {
   const onSubmit = async (data) => {
     const formData = new FormData();
     formData.append("name", data.name);
-    formData.append("bio", data.bio);
-    formData.append("location", data.location);
+    formData.append("bio", data.bio || "");
+    formData.append("location", data.location || "");
     formData.append("experienceLevel", data.experienceLevel);
-    formData.append("skillsOffered", JSON.stringify(data.skillsOffered.split(",").map((s) => s.trim()).filter(Boolean)));
-    formData.append("skillsWanted", JSON.stringify(data.skillsWanted.split(",").map((s) => s.trim()).filter(Boolean)));
+    const skillsOfferedArr = data.skillsOffered ? data.skillsOffered.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const skillsWantedArr = data.skillsWanted ? data.skillsWanted.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    skillsOfferedArr.forEach((s) => formData.append("skillsOffered[]", s));
+    skillsWantedArr.forEach((s) => formData.append("skillsWanted[]", s));
+    if (skillsOfferedArr.length === 0) formData.append("skillsOffered[]", "");
+    if (skillsWantedArr.length === 0) formData.append("skillsWanted[]", "");
     if (data.profileImage?.[0]) formData.append("profileImage", data.profileImage[0]);
     try {
       await api.put("/users/me", formData, { headers: { "Content-Type": "multipart/form-data" } });

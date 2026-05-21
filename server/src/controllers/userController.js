@@ -15,15 +15,23 @@ export const getMe = asyncHandler(async (req, res) => {
  * PUT /api/users/me - update profile, optional profile image upload
  */
 export const updateMe = asyncHandler(async (req, res) => {
-  const { name, bio, location, availability, experienceLevel, skillsOffered, skillsWanted } = req.body;
+  const { name, bio, location, availability, experienceLevel } = req.body;
+  // FormData sends arrays as either `skillsOffered[]` or `skillsOffered`
+  const rawOffered = req.body["skillsOffered[]"] || req.body.skillsOffered;
+  const rawWanted = req.body["skillsWanted[]"] || req.body.skillsWanted;
+  const toArray = (val) => {
+    if (!val) return [];
+    const arr = Array.isArray(val) ? val : [val];
+    return arr.map((s) => s.trim()).filter(Boolean);
+  };
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (bio !== undefined) updates.bio = bio;
   if (location !== undefined) updates.location = location;
   if (availability !== undefined) updates.availability = Array.isArray(availability) ? availability : [];
   if (experienceLevel !== undefined) updates.experienceLevel = experienceLevel;
-  if (skillsOffered !== undefined) updates.skillsOffered = Array.isArray(skillsOffered) ? skillsOffered : [];
-  if (skillsWanted !== undefined) updates.skillsWanted = Array.isArray(skillsWanted) ? skillsWanted : [];
+  if (rawOffered !== undefined) updates.skillsOffered = toArray(rawOffered);
+  if (rawWanted !== undefined) updates.skillsWanted = toArray(rawWanted);
 
   if (req.file) {
     if (initCloudinary()) {
