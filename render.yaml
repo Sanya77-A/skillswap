@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: skillswap-api
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production

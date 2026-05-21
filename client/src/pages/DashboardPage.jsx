@@ -77,7 +77,7 @@ export default function DashboardPage() {
           {chartData.length > 0 && (
             <Card className="mb-8 p-6">
               <h2 className="font-heading font-semibold text-lg text-text-primary mb-4">Swaps by month</h2>
-              <div className="h-64">
+              <div className="h-64" style={{ minHeight: 256 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
                     <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
