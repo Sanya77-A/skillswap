@@ -10,11 +10,17 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// In-memory token store (survives re-renders, cleared on tab close)
-let _accessToken = null;
+// Token store — persisted to localStorage to survive page refreshes
+const TOKEN_KEY = "ss_access_token";
+let _accessToken = localStorage.getItem(TOKEN_KEY) || null;
 
 export function setAccessToken(token) {
   _accessToken = token;
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 export function getAccessToken() {
@@ -23,6 +29,7 @@ export function getAccessToken() {
 
 export function clearAccessToken() {
   _accessToken = null;
+  localStorage.removeItem(TOKEN_KEY);
 }
 
 // Attach token as Authorization header on every request
