@@ -24,15 +24,15 @@ const getOrCreateConversation = async (user1Id, user2Id) => {
   // Always sort so [A,B] and [B,A] are treated as the same conversation
   const sorted = [user1Id.toString(), user2Id.toString()].sort();
 
+  // Try to find existing conversation first
+  let conv = await Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
+  if (conv) return conv;
+
+  // Try to create — catch duplicate key if two requests race
   try {
-    const conv = await Conversation.findOneAndUpdate(
-      { participants: { $all: sorted, $size: 2 } },
-      { $setOnInsert: { participants: sorted } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    conv = await Conversation.create({ participants: sorted });
     return conv;
   } catch (err) {
-    // Race condition — another request created it first, just fetch it
     if (err.code === 11000) {
       return Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
     }
