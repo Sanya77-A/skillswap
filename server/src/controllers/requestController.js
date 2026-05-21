@@ -103,6 +103,16 @@ export const updateRequest = asyncHandler(async (req, res) => {
     }
     request.status = action === "accept" ? "ACCEPTED" : "REJECTED";
     await request.save();
+
+    if (action === "accept") {
+      import("../models/Conversation.js").then(({ default: Conversation }) => {
+        Conversation.findOne({ participants: { $all: [request.sender._id, request.receiver._id] } }).then((conv) => {
+          if (!conv) {
+            Conversation.create({ participants: [request.sender._id, request.receiver._id] });
+          }
+        });
+      });
+    }
     const notifUserId = isReceiver ? request.sender._id : request.receiver._id;
     await createNotification(notifUserId, {
       type: action === "accept" ? "REQUEST_ACCEPTED" : "REQUEST_REJECTED",

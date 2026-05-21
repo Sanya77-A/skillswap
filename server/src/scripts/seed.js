@@ -59,6 +59,9 @@ const users = [
 async function seed() {
   await mongoose.connect(MONGO_URI);
   console.log("Connected to MongoDB");
+  await User.deleteMany({});
+  await SwapRequest.deleteMany({});
+  console.log("Cleared old data");
 
   for (const u of users) {
     const exists = await User.findOne({ email: u.email });
@@ -66,9 +69,7 @@ async function seed() {
       console.log("Skip (exists):", u.email);
       continue;
     }
-    const hashed = await bcrypt.hash(u.password, 12);
-    const { password, ...rest } = u;
-    await User.create({ ...rest, password: hashed });
+    await User.create(u);
     console.log("Created:", u.email);
   }
 

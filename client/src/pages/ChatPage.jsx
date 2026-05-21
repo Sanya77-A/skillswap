@@ -5,7 +5,9 @@ import { useSocket } from "../hooks/useSocket";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { Paperclip } from "lucide-react";
+import { Paperclip, Phone, Video as VideoIcon } from "lucide-react";
+import { VideoCall } from "../components/VideoCall";
+import { IncomingCallModal } from "../components/IncomingCallModal";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
@@ -14,6 +16,7 @@ export default function ChatPage() {
   const { user } = useSelector((s) => s.auth);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [callState, setCallState] = useState({ status: "idle" });
 
   useEffect(() => {
     dispatch(fetchConversations());
@@ -25,11 +28,35 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("message", (msg) => {
-      dispatch(addMessage(msg));
-    });
-    return () => socket.off("message");
+    
+    const handleMessage = (msg) => dispatch(addMessage(msg));
+    const handleIncomingCall = ({ from, offer, isVideo, callerName }) => {
+      setCallState({ status: "incoming", remoteId: from, offer, isVideo, callerName });
+    };
+    const handleCallEnded = () => {
+      setCallState(prev => prev.status === "incoming" ? { status: "idle" } : prev);
+    };
+
+    socket.on("message", handleMessage);
+    socket.on("incoming_call", handleIncomingCall);
+    socket.on("call_ended", handleCallEnded);
+    
+    return () => {
+      socket.off("message", handleMessage);
+      socket.off("incoming_call", handleIncomingCall);
+      socket.off("call_ended", handleCallEnded);
+    };
   }, [socket, dispatch]);
+
+  const startCall = (isVideoCall) => {
+    if (!other) return;
+    setCallState({ 
+      status: "calling", 
+      remoteId: other._id, 
+      remoteUserName: other.name, 
+      isVideo: isVideoCall 
+    });
+  };
 
   const activeConv = conversations.find((c) => c._id === activeConversationId);
   const other = activeConv?.other || activeConv?.participants?.find((p) => p._id !== user?._id);
@@ -84,6 +111,14 @@ export default function ChatPage() {
               <Avatar src={other?.profileImage} name={other?.name} size="sm" />
               <strong className="text-text-primary">{other?.name}</strong>
               {onlineUsers?.includes(other?._id) && <span className="text-accent-2 text-sm">Online</span>}
+              <div className="ml-auto flex gap-2">
+                <button onClick={() => startCall(false)} className="p-2 text-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors">
+                  <Phone className="w-5 h-5" />
+                </button>
+                <button onClick={() => startCall(true)} className="p-2 text-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors">
+                  <VideoIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {msgs.map((m) => (
@@ -134,6 +169,28 @@ export default function ChatPage() {
           <div className="flex-1 flex items-center justify-center text-text-secondary">Select a conversation</div>
         )}
       </Card>
+      <IncomingCallModal 
+        open={callState.status === "incoming"}
+        callerName={callState.callerName}
+        isVideo={callState.isVideo}
+        onAccept={() => setCallState({ ...callState, status: "active" })}
+        onDecline={() => {
+          socket?.emit("end_call", { to: callState.remoteId });
+          setCallState({ status: "idle" });
+        }}
+      />
+      
+      {(callState.status === "calling" || callState.status === "active") && (
+        <VideoCall 
+          socket={socket}
+          isInitiator={callState.status === "calling"}
+          remoteUserId={callState.remoteId}
+          remoteUserName={callState.remoteUserName || callState.callerName}
+          isVideo={callState.isVideo}
+          incomingOffer={callState.offer}
+          onEnd={() => setCallState({ status: "idle" })}
+        />
+      )}
     </div>
   );
 }

@@ -16,7 +16,9 @@ export function useSocket() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const s = io(window.location.origin, {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const socketOrigin = apiUrl ? new URL(apiUrl).origin : window.location.origin;
+    const s = io(socketOrigin, {
       path: "/socket.io",
       withCredentials: true,
     });

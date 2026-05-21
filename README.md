@@ -124,7 +124,8 @@ skillswap/
 
 ## Matching and chat
 
-- **Matching:** Recommended matches are computed by overlap: your `skillsWanted` with others’ `skillsOffered`, and your `skillsOffered` with others’ `skillsWanted`. Results are ranked (mutual match first, then by rating and activity).
+- **Matching:** Recommended matches are computed by overlap: your `skillsWanted` with others’ `skillsOffered`, and your `skillsOffered` with others’ `skillsWanted`. Results are ranked (mutual match first
+, then by rating and activity).
 - **Chat:** Socket.io authenticates with the JWT access token. Chat is allowed only between users who have an **ACCEPTED** or **COMPLETED** swap. Messages are stored in MongoDB; the server emits `message` to the recipient and `online_users` for the presence list.
 
 ## Example requests (curl)
@@ -144,6 +145,34 @@ curl -X POST http://localhost:5000/api/auth/login \
 # Get matches
 curl http://localhost:5000/api/matches -H "Authorization: Bearer <accessToken>"
 ```
+
+## Deploy on Vercel (frontend)
+
+The **client** can be deployed on Vercel. The **server** must be hosted elsewhere (e.g. [Railway](https://railway.app), [Render](https://render.com), or a VPS).
+
+### 1. Deploy the backend first
+
+- Deploy the **server** (Node/Express) to Railway, Render, or similar. Set env vars: `MONGO_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and **`CLIENT_URL`** = your Vercel frontend URL (e.g. `https://skillswap.vercel.app`).
+- Note the backend URL (e.g. `https://skillswap-api.railway.app`).
+
+### 2. Deploy the frontend to Vercel
+
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub.
+2. Click **Add New** → **Project** and import the `Samtav007/skillswap` repo.
+3. Configure the project:
+   - **Root Directory:** set to **`client`** (so Vercel builds only the React app).
+   - **Framework Preset:** Vite (auto-detected).
+   - **Build Command:** `npm run build` (default).
+   - **Output Directory:** `dist` (default).
+4. **Environment variables:** add:
+   - **`VITE_API_URL`** = your backend URL **without** `/api` (e.g. `https://skillswap-api.railway.app`).  
+     The app will call `{VITE_API_URL}/api` and connect Socket.io to `{VITE_API_URL}`.
+5. Click **Deploy**.
+
+### 3. CORS and cookies
+
+- The server already uses `CLIENT_URL` for CORS. Set it to your Vercel URL so the browser allows requests.
+- If you use HTTP-only cookies across domains (frontend on Vercel, API on Railway), the server may need `SameSite=None; Secure` for cookies in production. The backend may require a small change for cross-origin cookies depending on your setup.
 
 ## Build for production
 

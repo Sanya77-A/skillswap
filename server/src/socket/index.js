@@ -52,6 +52,23 @@ export const setupSocket = (io) => {
       socket.to(`conv:${conversationId}`).emit("user_typing_stop", { userId: socket.userId });
     });
 
+    // WebRTC Signaling Events
+    socket.on("call_user", ({ to, offer, isVideo, callerName }) => {
+      io.to(`user:${to}`).emit("incoming_call", { from: socket.userId, offer, isVideo, callerName });
+    });
+
+    socket.on("answer_call", ({ to, answer }) => {
+      io.to(`user:${to}`).emit("call_answered", { answer });
+    });
+
+    socket.on("ice_candidate", ({ to, candidate }) => {
+      io.to(`user:${to}`).emit("ice_candidate", { candidate });
+    });
+
+    socket.on("end_call", ({ to }) => {
+      io.to(`user:${to}`).emit("call_ended");
+    });
+
     socket.on("disconnect", () => {
       getOnlineUserIds(io).then((online) => io.emit("online_users", online));
     });
