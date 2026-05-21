@@ -106,11 +106,12 @@ export const updateRequest = asyncHandler(async (req, res) => {
 
     if (action === "accept") {
       import("../models/Conversation.js").then(({ default: Conversation }) => {
-        Conversation.findOne({ participants: { $all: [request.sender._id, request.receiver._id] } }).then((conv) => {
-          if (!conv) {
-            Conversation.create({ participants: [request.sender._id, request.receiver._id] });
-          }
-        });
+        const sorted = [request.sender._id.toString(), request.receiver._id.toString()].sort();
+        Conversation.findOneAndUpdate(
+          { participants: { $all: sorted, $size: 2 } },
+          { $setOnInsert: { participants: sorted } },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        ).catch(() => {});
       });
     }
     const notifUserId = isReceiver ? request.sender._id : request.receiver._id;

@@ -20,15 +20,24 @@ const getOrCreateConversation = async (user1Id, user2Id) => {
     ],
   });
   if (!allowed) return null;
-  let conv = await Conversation.findOne({
-    participants: { $all: [user1Id, user2Id] },
-  });
-  if (!conv) {
-    conv = await Conversation.create({
-      participants: [user1Id, user2Id],
-    });
+
+  // Always sort so [A,B] and [B,A] are treated as the same conversation
+  const sorted = [user1Id.toString(), user2Id.toString()].sort();
+
+  try {
+    const conv = await Conversation.findOneAndUpdate(
+      { participants: { $all: sorted, $size: 2 } },
+      { $setOnInsert: { participants: sorted } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    return conv;
+  } catch (err) {
+    // Race condition — another request created it first, just fetch it
+    if (err.code === 11000) {
+      return Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
+    }
+    throw err;
   }
-  return conv;
 };
 
 /**

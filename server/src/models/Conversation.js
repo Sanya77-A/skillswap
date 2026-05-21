@@ -10,7 +10,7 @@ const conversationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-conversationSchema.index({ participants: 1 }, { unique: true });
+conversationSchema.index({ participants: 1 }, { unique: true, sparse: true });
 conversationSchema.index({ lastMessageAt: -1 });
 
 export default mongoose.model("Conversation", conversationSchema);
