@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchConversations, fetchMessages, sendMessage, setActiveConversation, addMessage } from "../features/chat/chatSlice";
 import { useSocket } from "../hooks/useSocket";
@@ -17,6 +17,12 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [callState, setCallState] = useState({ status: "idle" });
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeConversationId]);
+
 
   useEffect(() => {
     dispatch(fetchConversations());
@@ -143,6 +149,7 @@ export default function ChatPage() {
                   </span>
                 </div>
               ))}
+              <div ref={bottomRef} />
             </div>
             <form onSubmit={handleSend} className="p-4 flex flex-col gap-2 border-t border-border">
               {attachments.length > 0 && (

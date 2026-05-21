@@ -20,9 +20,23 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
   const [isVideoOff, setIsVideoOff] = useState(!isVideo);
 
   useEffect(() => {
+    let isMounted = true;
     async function startCall() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+        } catch (mediaErr) {
+          console.warn("Camera failed, trying audio only", mediaErr);
+          stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+          setIsVideoOff(true);
+        }
+        
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
         localStreamRef.current = stream;
         
         if (localVideoRef.current) {
@@ -50,7 +64,7 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
         if (isInitiator) {
           const offer = await peer.createOffer();
           await peer.setLocalDescription(offer);
-          socket.emit("call_user", { to: remoteUserId, offer, isVideo, callerName: "You" }); // name handled in ChatPage
+          socket.emit("call_user", { to: remoteUserId, offer, isVideo, callerName: "You" });
         } else {
           await peer.setRemoteDescription(new RTCSessionDescription(incomingOffer));
           const answer = await peer.createAnswer();
@@ -59,14 +73,23 @@ export function VideoCall({ socket, isInitiator, remoteUserId, remoteUserName, i
         }
       } catch (err) {
         console.error("Error accessing media devices.", err);
-        handleEndCall();
+        if (isMounted) handleEndCall();
       }
     }
 
     startCall();
 
     return () => {
-      handleEndCall();
+      isMounted = false;
+      // Note: we don't call handleEndCall here to prevent StrictMode double-mount from killing the call immediately.
+      // If the component truly unmounts via user action, they should click the End Call button.
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (peerRef.current) {
+        peerRef.current.close();
+        peerRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
