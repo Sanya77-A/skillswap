@@ -4,9 +4,10 @@ import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
 import { setOnlineUsers } from "../features/chat/chatSlice";
 import { addNotification } from "../features/notifications/notificationsSlice";
+import { getAccessToken } from "../utils/api";
 
 /**
- * Connect to Socket.io; auth via HTTP-only cookie (withCredentials).
+ * Connect to Socket.io; auth via HTTP-only cookie (withCredentials) and authorization token.
  */
 export function useSocket() {
   const dispatch = useDispatch();
@@ -18,9 +19,11 @@ export function useSocket() {
     if (!isAuthenticated) return;
     const apiUrl = import.meta.env.VITE_API_URL;
     const socketOrigin = apiUrl ? new URL(apiUrl).origin : window.location.origin;
+    const token = getAccessToken();
     const s = io(socketOrigin, {
       path: "/socket.io",
       withCredentials: true,
+      auth: { token },
     });
     s.on("connect", () => setSocket(s));
     s.on("online_users", (ids) => {

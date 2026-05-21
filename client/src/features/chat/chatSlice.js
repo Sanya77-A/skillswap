@@ -36,7 +36,9 @@ export const sendMessage = createAsyncThunk(
         for (let i = 0; i < files.length; i++) {
           formData.append("attachments", files[i]);
         }
-        const res = await api.post(`/chats/${conversationId}/messages`, formData);
+        const res = await api.post(`/chats/${conversationId}/messages`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         data = res.data;
       } else {
         const res = await api.post(`/chats/${conversationId}/messages`, { content });
