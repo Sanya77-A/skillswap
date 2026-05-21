@@ -12,6 +12,14 @@ import { cloudinary, initCloudinary } from "../config/cloudinary.js";
  * Allowed if: they have an ACCEPTED or COMPLETED swap request.
  */
 const getOrCreateConversation = async (user1Id, user2Id) => {
+  // Always sort participants for consistent ordering
+  const sorted = [user1Id.toString(), user2Id.toString()].sort();
+
+  // If conversation already exists, return it directly (no swap check needed)
+  const existing = await Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
+  if (existing) return existing;
+
+  // No existing conversation — check they have an accepted/completed swap
   const allowed = await SwapRequest.findOne({
     status: { $in: ["ACCEPTED", "COMPLETED"] },
     $or: [
@@ -21,16 +29,9 @@ const getOrCreateConversation = async (user1Id, user2Id) => {
   });
   if (!allowed) return null;
 
-  // Always sort so [A,B] and [B,A] are treated as the same conversation
-  const sorted = [user1Id.toString(), user2Id.toString()].sort();
-
-  // Try to find existing conversation first
-  let conv = await Conversation.findOne({ participants: { $all: sorted, $size: 2 } });
-  if (conv) return conv;
-
-  // Try to create — catch duplicate key if two requests race
+  // Create new conversation
   try {
-    conv = await Conversation.create({ participants: sorted });
+    const conv = await Conversation.create({ participants: sorted });
     return conv;
   } catch (err) {
     if (err.code === 11000) {
